@@ -12,9 +12,9 @@ import android.content.ContentUris
 
 class MainActivity : AppCompatActivity() {
 
-    val adapter: TracksAdapter = TracksAdapter({ track -> playTrack(track) })
+    private val adapter = TracksAdapter { playTrack(it) }
 
-    val mediaPlayer: MediaPlayer = MediaPlayer()
+    private val mediaPlayer = MediaPlayer()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,26 +36,27 @@ class MainActivity : AppCompatActivity() {
         val contentResolver = contentResolver
         val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
         val cursor = contentResolver.query(uri, null, null, null, null)
-        if (cursor == null) {
-            // query failed, handle error.
-        } else if (!cursor.moveToFirst()) {
-            // no media on the device
-        } else {
-            val titleColumn = cursor.getColumnIndex(MediaStore.Audio.Media.TITLE)
-            val idColumn = cursor.getColumnIndex(MediaStore.Audio.Media._ID)
-            val artistColumn = cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST)
-            do {
-                val thisId = cursor.getLong(idColumn)
-                val thisTitle = cursor.getString(titleColumn)
-                val thisArtist = cursor.getString(artistColumn)
-                adapter.addTrack(Track(thisTitle, thisArtist, thisId))
-            } while (cursor.moveToNext())
+        cursor.run {
+            if (moveToFirst()) {
+                val titleColumn = getColumnIndex(MediaStore.Audio.Media.TITLE)
+                val idColumn = getColumnIndex(MediaStore.Audio.Media._ID)
+                val artistColumn = getColumnIndex(MediaStore.Audio.Media.ARTIST)
+                do {
+                    val thisId = getLong(idColumn)
+                    val thisTitle = getString(titleColumn)
+                    val thisArtist = getString(artistColumn)
+                    adapter.addTrack(Track(thisTitle, thisArtist, thisId))
+                } while (moveToNext())
+            }
         }
     }
 
-    fun playTrack(track: Track): Unit {
+    fun playTrack(track: Track) {
         val contentUri = ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, track.id)
-        mediaPlayer.setDataSource(applicationContext, contentUri)
-        mediaPlayer.start()
+        with(mediaPlayer) {
+            setDataSource(applicationContext, contentUri)
+            prepare()
+            start()
+        }
     }
 }

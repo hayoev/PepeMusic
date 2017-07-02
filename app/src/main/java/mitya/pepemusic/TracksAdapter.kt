@@ -10,27 +10,32 @@ import kotlinx.android.synthetic.main.track_layout.view.*
 /**
  * Created by Mitya on 28.06.2017.
  */
-class TracksAdapter(val listener: (Track) -> Unit) : Adapter<TracksAdapter.ViewHolder>() {
+class TracksAdapter(val listener: (Track) -> Unit) : Adapter<TracksAdapter.TrackViewHolder>() {
 
-    private var items = arrayListOf<Track>()
+    private val items = arrayListOf<Track>()
 
     fun addTrack(track: Track) {
         items.add(track)
         this.notifyItemInserted(itemCount - 1)
     }
 
-    fun addTrackList(trackList: MutableList<Track>) = items.addAll(trackList)
+    fun addTrackList(trackList: MutableList<Track>) {
+        val startPosition = itemCount
+        items.addAll(trackList)
+        this.notifyItemRangeInserted(startPosition, items.size)
+    }
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) = holder.bindTrack(items[position], listener)
+
+    override fun onBindViewHolder(holder: TrackViewHolder, position: Int) = holder.bindTrack(items[position], listener)
 
     override fun getItemCount() = items.size
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TrackViewHolder {
         val itemView = LayoutInflater.from(parent.context).inflate(R.layout.track_layout, parent, false)
-        return ViewHolder(itemView)
+        return TrackViewHolder(itemView)
     }
 
-    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    class TrackViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         fun bindTrack(track: Track, listener: (Track) -> Unit) {
             with(itemView) {
                 trackTitle.text = track.title

@@ -4,20 +4,21 @@
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
+
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
         <TextView
-            android:id="@+id/trackTitle"
+            android:id="@+id/directoryTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
 
         <TextView
-            android:id="@+id/trackArtist"
+            android:id="@+id/directoryPath"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/trackTitle" />
+            android:layout_below="@+id/directoryTitle" />
 
     </RelativeLayout>
 

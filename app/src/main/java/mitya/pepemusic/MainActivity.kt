@@ -1,62 +1,49 @@
 package mitya.pepemusic
 
-import android.media.AudioManager
-import android.media.MediaPlayer
 import android.os.Bundle
 import android.provider.MediaStore
+import android.support.v4.app.Fragment
 import android.support.v7.app.AppCompatActivity
-import android.support.v7.widget.LinearLayoutManager
-import kotlinx.android.synthetic.main.activity_main.*
-import android.content.ContentUris
-
 
 class MainActivity : AppCompatActivity() {
 
-    private val adapter = TracksAdapter { playTrack(it) }
+    private val directoryList = hashSetOf<String>()
 
-    private val mediaPlayer = MediaPlayer()
+    private val fragmentManager = supportFragmentManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        setupRecyclerView()
-        setupMediaPlayer()
-        loadTrackList()
-
+        loadDirectoryList()
+        replaceCurrentFragment(DirectoriesFragment())
     }
 
-    fun setupRecyclerView() {
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = adapter
+    fun replaceCurrentFragment(fragment: Fragment) {
+        val bundle = Bundle()
+        bundle.putStringArrayList("directoryList", ArrayList(directoryList.toList()))
+        fragment.arguments = bundle
+        fragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, fragment)
+                .commit()
     }
 
-    fun setupMediaPlayer() = mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC)
-
-    fun loadTrackList() {
+    fun loadDirectoryList() {
         val contentResolver = contentResolver
         val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
         val cursor = contentResolver.query(uri, null, null, null, null)
         cursor.run {
             if (moveToFirst()) {
-                val titleColumn = getColumnIndex(MediaStore.Audio.Media.TITLE)
-                val idColumn = getColumnIndex(MediaStore.Audio.Media._ID)
-                val artistColumn = getColumnIndex(MediaStore.Audio.Media.ARTIST)
+                val path = getColumnIndex(MediaStore.Audio.Media.DATA)
+                val isMusic = getColumnIndex(MediaStore.Audio.Media.IS_MUSIC)
                 do {
-                    val thisId = getLong(idColumn)
-                    val thisTitle = getString(titleColumn)
-                    val thisArtist = getString(artistColumn)
-                    adapter.addTrack(Track(thisTitle, thisArtist, thisId))
+                    val thisIsMusic = getInt(isMusic)
+                    if (thisIsMusic != 0) {
+                        val thisPath = getString(path)
+                        directoryList.add(getParent(thisPath))
+                    }
                 } while (moveToNext())
             }
         }
-    }
-
-    fun playTrack(track: Track) {
-        val contentUri = ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, track.id)
-        with(mediaPlayer) {
-            setDataSource(applicationContext, contentUri)
-            prepare()
-            start()
-        }
+        cursor.close()
     }
 }

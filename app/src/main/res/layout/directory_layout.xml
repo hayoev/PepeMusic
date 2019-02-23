@@ -2,8 +2,8 @@
 <android.support.v7.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:layout_margin="10dp"
     android:orientation="vertical">
-
 
     <RelativeLayout
         android:layout_width="match_parent"
@@ -13,12 +13,6 @@
             android:id="@+id/directoryTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
-
-        <TextView
-            android:id="@+id/directoryPath"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@+id/directoryTitle" />
 
     </RelativeLayout>
 

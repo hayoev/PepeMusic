@@ -15,9 +15,9 @@ class DirectoriesAdapter(val listener: (String) -> Unit) : Adapter<DirectoriesAd
     private val items = arrayListOf<String>()
 
     fun addDirectories(directories: ArrayList<String>) {
-        val startPosition = itemCount
+        items.clear()
         items.addAll(directories)
-        this.notifyItemRangeInserted(startPosition, items.size)
+        this.notifyItemRangeInserted(0, items.size)
     }
 
     override fun onBindViewHolder(holder: DirectoryViewHolder, position: Int) = holder.bindDirectory(items[position], listener)
@@ -32,7 +32,6 @@ class DirectoriesAdapter(val listener: (String) -> Unit) : Adapter<DirectoriesAd
     class DirectoryViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         fun bindDirectory(directory: String, listener: (String) -> Unit) {
             with(itemView) {
-                directoryPath.text = directory
                 directoryTitle.text = directory
                 setOnClickListener { listener(directory) }
             }

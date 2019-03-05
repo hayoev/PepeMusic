@@ -22,7 +22,7 @@ class DirectoriesFragment : Fragment() {
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        directoryList = arguments.getStringArrayList("directoryList")
+        directoryList = arguments!!.getStringArrayList("directoryList")
         setupRecyclerView()
         adapter.addDirectories(directoryList)
     }
@@ -37,7 +37,7 @@ class DirectoriesFragment : Fragment() {
         bundle.putString("currentDirectory", path)
         val fragment = TracksFragment()
         fragment.arguments = bundle
-        this.fragmentManager.beginTransaction()
+        this.requireFragmentManager().beginTransaction()
                 .replace(R.id.fragmentContainer, fragment, null)
                 .addToBackStack(null)
                 .commit()

@@ -1,6 +1,11 @@
 package mitya.pepemusic
 
+import android.net.Uri
+import android.os.Parcelable
+import kotlinx.android.parcel.Parcelize
+
 /**
  * Created by Mitya on 28.06.2017.
  */
-data class Track(val title: String, val artist: String, val id: Long)
+@Parcelize
+data class Track(val title: String, val artist: String, val contentUri: Uri) : Parcelable

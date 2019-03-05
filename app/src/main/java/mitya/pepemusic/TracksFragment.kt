@@ -1,6 +1,7 @@
 package mitya.pepemusic
 
 import android.content.ContentUris
+import android.content.Intent
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Bundle
@@ -10,6 +11,7 @@ import android.support.v7.widget.LinearLayoutManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import com.google.android.exoplayer2.util.Util
 import kotlinx.android.synthetic.main.fragment_main.*
 
 /**
@@ -29,7 +31,7 @@ class TracksFragment : Fragment() {
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        currentDirectory = arguments.getString("currentDirectory")
+        currentDirectory = arguments!!.getString("currentDirectory")
         setupRecyclerView()
         loadTrackList()
     }
@@ -42,15 +44,10 @@ class TracksFragment : Fragment() {
     }
 
     fun playTrack(track: Track) {
-        val contentUri = ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, track.id)
-        with(mediaPlayer) {
-            if (isPlaying) {
-                reset()
-            } else {
-                setDataSource(activity, contentUri)
-                prepare()
-                start()
-            }
+        Intent(context, AudioPlayerService::class.java).apply {
+            putExtra("track", track)
+        }.also {
+            Util.startForegroundService(context, it)
         }
     }
 
@@ -61,7 +58,7 @@ class TracksFragment : Fragment() {
     }
 
     fun loadTrackList() {
-        val contentResolver = activity.contentResolver
+        val contentResolver = requireActivity().contentResolver
         val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
         val cursor = contentResolver.query(uri, null, null, null, null)
         cursor.run {
@@ -78,7 +75,9 @@ class TracksFragment : Fragment() {
                         val thisId = getLong(idColumn)
                         val thisTitle = getString(titleColumn)
                         val thisArtist = getString(artistColumn)
-                        adapter.addTrack(Track(thisTitle, thisArtist, thisId))
+                        adapter.addTrack(Track(thisTitle, thisArtist,
+                                ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, thisId)
+                        ))
                     }
                 } while (moveToNext())
             }

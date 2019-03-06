@@ -8,6 +8,7 @@ import android.graphics.Bitmap
 import com.google.android.exoplayer2.ExoPlayerFactory
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.SimpleExoPlayer
+import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.ExtractorMediaSource
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.ui.PlayerNotificationManager
@@ -18,7 +19,7 @@ import com.google.android.exoplayer2.util.Util
 
 class AudioPlayerService : Service() {
 
-    private lateinit var track: Track
+    private lateinit var playlist: Playlist
     private val player: SimpleExoPlayer by lazy { ExoPlayerFactory.newSimpleInstance(this, DefaultTrackSelector()) }
     private val playerNotificationManager by lazy {
         PlayerNotificationManager.createWithNotificationChannel(this,
@@ -28,23 +29,26 @@ class AudioPlayerService : Service() {
                         return null
                     }
 
-                    override fun getCurrentContentText(player: Player?) = "keke"
+                    override fun getCurrentContentText(player: Player) = playlist.list[player.currentWindowIndex].artist
 
-                    override fun getCurrentContentTitle(player: Player?) = track.title
+                    override fun getCurrentContentTitle(player: Player) = playlist.list[player.currentWindowIndex].title
 
-                    override fun getCurrentLargeIcon(player: Player?, callback: PlayerNotificationManager.BitmapCallback?): Bitmap? {
+                    override fun getCurrentLargeIcon(player: Player, callback: PlayerNotificationManager.BitmapCallback?): Bitmap? {
                         return null
                     }
                 })
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        track = intent.getParcelableExtra("track")
+        playlist = intent.getParcelableExtra("playlist")
         val dataSourceFactory = DefaultDataSourceFactory(this,
                 Util.getUserAgent(this, getString(R.string.app_name)))
-        //val concatenatingMediaSource = ConcatenatingMediaSource()
-        val mediaSource = ExtractorMediaSource.Factory(dataSourceFactory).createMediaSource(track.contentUri)
-        player.prepare(mediaSource)
+        val concatenatingMediaSource = ConcatenatingMediaSource()
+        for (track in playlist.list) {
+            concatenatingMediaSource.addMediaSource(ExtractorMediaSource.Factory(dataSourceFactory)
+                    .createMediaSource(track.contentUri))
+        }
+        player.prepare(concatenatingMediaSource)
         player.playWhenReady = true
 
         playerNotificationManager.setNotificationListener(object : NotificationListener {

@@ -22,17 +22,18 @@ class DirectoriesFragment : Fragment() {
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
+        playerControlView.visibility = View.GONE
         directoryList = arguments!!.getStringArrayList("directoryList")
         setupRecyclerView()
         adapter.addDirectories(directoryList)
     }
 
-    fun setupRecyclerView() {
+    private fun setupRecyclerView() {
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(activity)
     }
 
-    fun openDirectory(path: String) {
+    private fun openDirectory(path: String) {
         val bundle = Bundle()
         bundle.putString("currentDirectory", path)
         val fragment = TracksFragment()

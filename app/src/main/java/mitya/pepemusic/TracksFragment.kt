@@ -1,8 +1,8 @@
 package mitya.pepemusic
 
-import android.content.ContentUris
-import android.content.Intent
+import android.content.*
 import android.os.Bundle
+import android.os.IBinder
 import android.provider.MediaStore
 import android.support.v4.app.Fragment
 import android.support.v7.widget.LinearLayoutManager
@@ -16,6 +16,9 @@ import kotlinx.android.synthetic.main.fragment_main.*
  * Created by Mitya on 01.07.2017.
  */
 class TracksFragment : Fragment() {
+
+    private lateinit var audioPlayerService: AudioPlayerService
+    private var serviceBound = false
 
     private lateinit var currentDirectory: String
     private val trackList = arrayListOf<Track>()
@@ -33,13 +36,13 @@ class TracksFragment : Fragment() {
         setupRecyclerView()
     }
 
-    fun setupRecyclerView() {
+    private fun setupRecyclerView() {
         recyclerView.layoutManager = LinearLayoutManager(activity)
         recyclerView.adapter = adapter
         adapter.addTrackList(trackList)
     }
 
-    fun playTrack(currentTrack: Int) {
+    private fun playTrack(currentTrack: Int) {
         val tmpList = arrayListOf<Track>().apply { addAll(trackList) }
         val playlist = Playlist(currentTrack, tmpList)
         Intent(context, AudioPlayerService::class.java).apply {
@@ -49,7 +52,7 @@ class TracksFragment : Fragment() {
         }
     }
 
-    fun loadTrackList() {
+    private fun loadTrackList() {
         val cursor = requireActivity().contentResolver.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, null, null, null, null)
         cursor.run {
             if (moveToFirst()) {
@@ -73,6 +76,33 @@ class TracksFragment : Fragment() {
             }
         }
         cursor.close()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        Intent(context, AudioPlayerService::class.java).also { intent ->
+            activity!!.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        activity!!.unbindService(connection)
+        serviceBound = false
+    }
+
+    private val connection = object : ServiceConnection {
+
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            audioPlayerService = (service as AudioPlayerService.AudioPLayerBinder).getService()
+            serviceBound = true
+            playerControlView.player = audioPlayerService.player
+        }
+
+        override fun onServiceDisconnected(name: ComponentName) {
+            serviceBound = false
+        }
+
     }
 
 }

@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.graphics.Bitmap
+import android.os.Binder
 import com.google.android.exoplayer2.ExoPlayerFactory
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.SimpleExoPlayer
@@ -18,9 +19,10 @@ import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.util.Util
 
 class AudioPlayerService : Service() {
+    private val binder = AudioPLayerBinder()
 
     private lateinit var playlist: Playlist
-    private val player: SimpleExoPlayer by lazy { ExoPlayerFactory.newSimpleInstance(this, DefaultTrackSelector()) }
+    val player: SimpleExoPlayer by lazy { ExoPlayerFactory.newSimpleInstance(this, DefaultTrackSelector()) }
     private val playerNotificationManager by lazy {
         PlayerNotificationManager.createWithNotificationChannel(this,
                 PLAYBACK_CHANNEL_ID, R.string.playback_channel_name, PLAYBACK_NOTIFICATION_ID,
@@ -68,6 +70,10 @@ class AudioPlayerService : Service() {
         super.onDestroy()
     }
 
-    override fun onBind(p0: Intent?) = null
-    
+    inner class AudioPLayerBinder : Binder() {
+        fun getService() = this@AudioPlayerService
+    }
+
+    override fun onBind(intent: Intent) = binder
+
 }

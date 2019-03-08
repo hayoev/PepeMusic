@@ -21,7 +21,7 @@ import com.google.android.exoplayer2.util.Util
 class AudioPlayerService : Service() {
     private val binder = AudioPLayerBinder()
 
-    private lateinit var playlist: Playlist
+    lateinit var playlist: Playlist
     val player: SimpleExoPlayer by lazy { ExoPlayerFactory.newSimpleInstance(this, DefaultTrackSelector()) }
     private val playerNotificationManager by lazy {
         PlayerNotificationManager.createWithNotificationChannel(this,

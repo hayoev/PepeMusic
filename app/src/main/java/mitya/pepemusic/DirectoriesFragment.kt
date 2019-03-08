@@ -22,7 +22,6 @@ class DirectoriesFragment : Fragment() {
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        playerControlView.visibility = View.GONE
         directoryList = arguments!!.getStringArrayList("directoryList")
         setupRecyclerView()
         adapter.addDirectories(directoryList)

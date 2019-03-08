@@ -9,7 +9,9 @@ import android.support.v7.widget.LinearLayoutManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.util.Util
+import kotlinx.android.synthetic.main.exo_player_control_view.view.*
 import kotlinx.android.synthetic.main.fragment_main.*
 
 /**
@@ -95,14 +97,37 @@ class TracksFragment : Fragment() {
 
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             audioPlayerService = (service as AudioPlayerService.AudioPLayerBinder).getService()
+            audioPlayerService.player.addListener(object : Player.EventListener {
+
+                override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+                    updatePlayerControlView()
+                }
+
+                override fun onPositionDiscontinuity(reason: Int) {
+                    updatePlayerControlView()
+                }
+            })
             serviceBound = true
+            if (audioPlayerService.player.playbackState == Player.STATE_READY) {
+                updatePlayerControlView()
+            }
             playerControlView.player = audioPlayerService.player
         }
 
         override fun onServiceDisconnected(name: ComponentName) {
             serviceBound = false
+            playerControlView.visibility = View.GONE
         }
 
+    }
+
+    fun updatePlayerControlView() {
+        if (playerControlView != null) {
+            playerControlView.visibility = View.VISIBLE
+            val currentWindowIndex = audioPlayerService.player.currentWindowIndex
+            playerControlView.title.text = audioPlayerService.playlist.list[currentWindowIndex].title
+            playerControlView.artist.text = audioPlayerService.playlist.list[currentWindowIndex].artist
+        }
     }
 
 }

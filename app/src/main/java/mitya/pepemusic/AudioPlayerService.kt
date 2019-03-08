@@ -6,9 +6,13 @@ import android.app.Service
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Binder
+import android.support.v4.media.MediaDescriptionCompat
+import android.support.v4.media.session.MediaSessionCompat
 import com.google.android.exoplayer2.ExoPlayerFactory
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.SimpleExoPlayer
+import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
+import com.google.android.exoplayer2.ext.mediasession.TimelineQueueNavigator
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.ExtractorMediaSource
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
@@ -22,13 +26,20 @@ class AudioPlayerService : Service() {
     private val binder = AudioPLayerBinder()
 
     lateinit var playlist: Playlist
+    lateinit var currentDirectory: String
     val player: SimpleExoPlayer by lazy { ExoPlayerFactory.newSimpleInstance(this, DefaultTrackSelector()) }
+    private val mediaSession: MediaSessionCompat by lazy { MediaSessionCompat(this, getString(R.string.app_name)) }
+    private val mediaSessionConnector: MediaSessionConnector by lazy { MediaSessionConnector(mediaSession) }
     private val playerNotificationManager by lazy {
         PlayerNotificationManager.createWithNotificationChannel(this,
                 PLAYBACK_CHANNEL_ID, R.string.playback_channel_name, PLAYBACK_NOTIFICATION_ID,
                 object : MediaDescriptionAdapter {
                     override fun createCurrentContentIntent(player: Player?): PendingIntent? {
-                        return null
+                        val intent = Intent(this@AudioPlayerService, MainActivity::class.java).apply {
+                            putExtra("directory", currentDirectory)
+                        }
+                        return PendingIntent.getActivity(this@AudioPlayerService, 0,
+                                intent, PendingIntent.FLAG_UPDATE_CURRENT)
                     }
 
                     override fun getCurrentContentText(player: Player) = playlist.list[player.currentWindowIndex].artist
@@ -41,8 +52,10 @@ class AudioPlayerService : Service() {
                 })
     }
 
+
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         playlist = intent.getParcelableExtra("playlist")
+        currentDirectory = intent.getStringExtra("directory")
         val dataSourceFactory = DefaultDataSourceFactory(this,
                 Util.getUserAgent(this, getString(R.string.app_name)))
         val concatenatingMediaSource = ConcatenatingMediaSource()
@@ -61,12 +74,26 @@ class AudioPlayerService : Service() {
 
         })
         playerNotificationManager.setPlayer(player)
+
+        mediaSession.isActive = true
+        playerNotificationManager.setMediaSessionToken(mediaSession.sessionToken)
+        mediaSessionConnector.setQueueNavigator(object : TimelineQueueNavigator(mediaSession) {
+            override fun getMediaDescription(player: Player?, windowIndex: Int) =
+                    MediaDescriptionCompat.Builder()
+                            .setTitle(playlist.list[windowIndex].title)
+                            .setMediaUri(playlist.list[windowIndex].contentUri)
+                            .build()
+        })
+        mediaSessionConnector.setPlayer(player, null)
+
         return START_STICKY
     }
 
     override fun onDestroy() {
         player.release()
         playerNotificationManager.setPlayer(null)
+        mediaSession.release()
+        mediaSessionConnector.setPlayer(null, null)
         super.onDestroy()
     }
 

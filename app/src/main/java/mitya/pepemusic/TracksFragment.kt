@@ -49,6 +49,7 @@ class TracksFragment : Fragment() {
         val playlist = Playlist(currentTrack, tmpList)
         Intent(context, AudioPlayerService::class.java).apply {
             putExtra("playlist", playlist)
+            putExtra("directory", currentDirectory)
         }.also {
             Util.startForegroundService(context, it)
         }

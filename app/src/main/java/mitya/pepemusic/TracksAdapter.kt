@@ -10,7 +10,7 @@ import kotlinx.android.synthetic.main.track_layout.view.*
 /**
  * Created by Mitya on 28.06.2017.
  */
-class TracksAdapter(val listener: (Track) -> Unit) : Adapter<TracksAdapter.TrackViewHolder>() {
+open class TracksAdapter(private val clickListener: (Int) -> Unit) : Adapter<TracksAdapter.TrackViewHolder>() {
 
     private val items = arrayListOf<Track>()
 
@@ -19,14 +19,13 @@ class TracksAdapter(val listener: (Track) -> Unit) : Adapter<TracksAdapter.Track
         this.notifyItemInserted(itemCount - 1)
     }
 
-    fun addTrackList(trackList: MutableList<Track>) {
+    fun addTrackList(trackList: ArrayList<Track>) {
         val startPosition = itemCount
         items.addAll(trackList)
         this.notifyItemRangeInserted(startPosition, items.size)
     }
 
-
-    override fun onBindViewHolder(holder: TrackViewHolder, position: Int) = holder.bindTrack(items[position], listener)
+    override fun onBindViewHolder(holder: TrackViewHolder, position: Int) = holder.bindTrack(items[position], clickListener)
 
     override fun getItemCount() = items.size
 
@@ -36,11 +35,11 @@ class TracksAdapter(val listener: (Track) -> Unit) : Adapter<TracksAdapter.Track
     }
 
     class TrackViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        fun bindTrack(track: Track, listener: (Track) -> Unit) {
+        fun bindTrack(track: Track, clickListener: (Int) -> Unit) {
             with(itemView) {
                 trackTitle.text = track.title
                 trackArtist.text = track.artist
-                setOnClickListener { listener(track) }
+                setOnClickListener { clickListener(this@TrackViewHolder.adapterPosition) }
             }
         }
     }

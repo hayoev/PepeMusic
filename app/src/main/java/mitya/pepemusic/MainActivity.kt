@@ -20,20 +20,25 @@ class MainActivity : AppCompatActivity() {
             requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), EXTERNAL_STORAGE_PERMISSION_CODE)
         } else {
             loadDirectoryList()
-            replaceCurrentFragment(DirectoriesFragment())
+            val bundle = Bundle()
+            if (intent.getStringExtra("directory") != null) {
+                bundle.putString("currentDirectory", intent.getStringExtra("directory"))
+                replaceCurrentFragment(TracksFragment(), bundle)
+            } else {
+                bundle.putStringArrayList("directoryList", ArrayList(directoryList.toList()))
+                replaceCurrentFragment(DirectoriesFragment(), bundle)
+            }
         }
     }
 
-    fun replaceCurrentFragment(fragment: Fragment) {
-        val bundle = Bundle()
-        bundle.putStringArrayList("directoryList", ArrayList(directoryList.toList()))
+    private fun replaceCurrentFragment(fragment: Fragment, bundle: Bundle) {
         fragment.arguments = bundle
         fragmentManager.beginTransaction()
                 .replace(R.id.fragmentContainer, fragment)
                 .commit()
     }
 
-    fun loadDirectoryList() {
+    private fun loadDirectoryList() {
         val contentResolver = contentResolver
         val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
         val cursor = contentResolver.query(uri, null, null, null, null)
@@ -58,7 +63,9 @@ class MainActivity : AppCompatActivity() {
             EXTERNAL_STORAGE_PERMISSION_CODE -> {
                 if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                     loadDirectoryList()
-                    replaceCurrentFragment(DirectoriesFragment())
+                    val bundle = Bundle()
+                    bundle.putStringArrayList("directoryList", ArrayList(directoryList.toList()))
+                    replaceCurrentFragment(DirectoriesFragment(), bundle)
                 }
                 return
             }

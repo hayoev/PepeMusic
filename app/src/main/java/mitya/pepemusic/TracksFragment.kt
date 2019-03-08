@@ -1,15 +1,17 @@
 package mitya.pepemusic
 
-import android.content.ContentUris
-import android.media.AudioManager
-import android.media.MediaPlayer
+import android.content.*
 import android.os.Bundle
+import android.os.IBinder
 import android.provider.MediaStore
 import android.support.v4.app.Fragment
 import android.support.v7.widget.LinearLayoutManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.util.Util
+import kotlinx.android.synthetic.main.exo_player_control_view.view.*
 import kotlinx.android.synthetic.main.fragment_main.*
 
 /**
@@ -17,53 +19,44 @@ import kotlinx.android.synthetic.main.fragment_main.*
  */
 class TracksFragment : Fragment() {
 
+    private lateinit var audioPlayerService: AudioPlayerService
+    private var serviceBound = false
+
     private lateinit var currentDirectory: String
-    private val mediaPlayer = MediaPlayer()
+    private val trackList = arrayListOf<Track>()
     private val adapter = TracksAdapter { playTrack(it) }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val view = inflater.inflate(R.layout.fragment_main, container, false)
-        setupMediaPlayer()
         return view
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        currentDirectory = arguments.getString("currentDirectory")
-        setupRecyclerView()
+        currentDirectory = arguments!!.getString("currentDirectory")
         loadTrackList()
+        setupRecyclerView()
     }
 
-    fun setupMediaPlayer() = mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC)
-
-    fun setupRecyclerView() {
+    private fun setupRecyclerView() {
         recyclerView.layoutManager = LinearLayoutManager(activity)
         recyclerView.adapter = adapter
+        adapter.addTrackList(trackList)
     }
 
-    fun playTrack(track: Track) {
-        val contentUri = ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, track.id)
-        with(mediaPlayer) {
-            if (isPlaying) {
-                reset()
-            } else {
-                setDataSource(activity, contentUri)
-                prepare()
-                start()
-            }
+    private fun playTrack(currentTrack: Int) {
+        val tmpList = arrayListOf<Track>().apply { addAll(trackList) }
+        val playlist = Playlist(currentTrack, tmpList)
+        Intent(context, AudioPlayerService::class.java).apply {
+            putExtra("playlist", playlist)
+            putExtra("directory", currentDirectory)
+        }.also {
+            Util.startForegroundService(context, it)
         }
     }
 
-
-    override fun onDestroy() {
-        super.onDestroy()
-        mediaPlayer.release()
-    }
-
-    fun loadTrackList() {
-        val contentResolver = activity.contentResolver
-        val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-        val cursor = contentResolver.query(uri, null, null, null, null)
+    private fun loadTrackList() {
+        val cursor = requireActivity().contentResolver.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, null, null, null, null)
         cursor.run {
             if (moveToFirst()) {
                 val titleColumn = getColumnIndex(MediaStore.Audio.Media.TITLE)
@@ -78,12 +71,64 @@ class TracksFragment : Fragment() {
                         val thisId = getLong(idColumn)
                         val thisTitle = getString(titleColumn)
                         val thisArtist = getString(artistColumn)
-                        adapter.addTrack(Track(thisTitle, thisArtist, thisId))
+                        trackList.add(Track(thisTitle, thisArtist,
+                                ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, thisId)
+                        ))
                     }
                 } while (moveToNext())
             }
         }
         cursor.close()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        Intent(context, AudioPlayerService::class.java).also { intent ->
+            activity!!.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        activity!!.unbindService(connection)
+        serviceBound = false
+    }
+
+    private val connection = object : ServiceConnection {
+
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            audioPlayerService = (service as AudioPlayerService.AudioPLayerBinder).getService()
+            audioPlayerService.player.addListener(object : Player.EventListener {
+
+                override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+                    updatePlayerControlView()
+                }
+
+                override fun onPositionDiscontinuity(reason: Int) {
+                    updatePlayerControlView()
+                }
+            })
+            serviceBound = true
+            if (audioPlayerService.player.playbackState == Player.STATE_READY) {
+                updatePlayerControlView()
+            }
+            playerControlView.player = audioPlayerService.player
+        }
+
+        override fun onServiceDisconnected(name: ComponentName) {
+            serviceBound = false
+            playerControlView.visibility = View.GONE
+        }
+
+    }
+
+    fun updatePlayerControlView() {
+        if (playerControlView != null) {
+            playerControlView.visibility = View.VISIBLE
+            val currentWindowIndex = audioPlayerService.player.currentWindowIndex
+            playerControlView.title.text = audioPlayerService.playlist.list[currentWindowIndex].title
+            playerControlView.artist.text = audioPlayerService.playlist.list[currentWindowIndex].artist
+        }
     }
 
 }

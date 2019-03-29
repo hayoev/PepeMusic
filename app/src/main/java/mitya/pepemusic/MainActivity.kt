@@ -1,77 +1,116 @@
 package mitya.pepemusic
 
 import android.Manifest
+import android.app.SearchManager
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.provider.MediaStore
+import android.os.Environment
 import android.support.v4.app.Fragment
+import android.support.v4.view.GravityCompat
 import android.support.v7.app.AppCompatActivity
+import android.support.v7.widget.SearchView
+import android.view.Menu
+import android.view.MenuItem
+import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
-
-    private val directoryList = hashSetOf<String>()
 
     private val fragmentManager = supportFragmentManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), EXTERNAL_STORAGE_PERMISSION_CODE)
+        setupNavigationView()
+        setupToolbar()
+        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+                || checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE
+                    , Manifest.permission.WRITE_EXTERNAL_STORAGE), EXTERNAL_STORAGE_PERMISSION_CODE)
         } else {
-            loadDirectoryList()
-            val bundle = Bundle()
             if (intent.getStringExtra("directory") != null) {
+                val bundle = Bundle()
                 bundle.putString("currentDirectory", intent.getStringExtra("directory"))
-                replaceCurrentFragment(TracksFragment(), bundle)
+                replaceCurrentFragment(LocalTracksFragment(), bundle)
             } else {
-                bundle.putStringArrayList("directoryList", ArrayList(directoryList.toList()))
-                replaceCurrentFragment(DirectoriesFragment(), bundle)
+                replaceCurrentFragment(DirectoriesFragment())
             }
         }
     }
 
-    private fun replaceCurrentFragment(fragment: Fragment, bundle: Bundle) {
+    private fun setupToolbar() {
+        setSupportActionBar(toolbar)
+        supportActionBar?.apply {
+            setDisplayHomeAsUpEnabled(true)
+            setHomeAsUpIndicator(R.drawable.ic_menu)
+        }
+    }
+
+    private fun setupNavigationView() {
+        navigationView.setNavigationItemSelectedListener { item ->
+            item.isChecked = true
+            drawerLayout.closeDrawers()
+            when (item.itemId) {
+                R.id.menuLocal -> replaceCurrentFragment(DirectoriesFragment())
+                R.id.menuVk -> {
+                    val bundle = Bundle()
+                    bundle.putString("currentDirectory"
+                            , Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC).absolutePath + "/" + getString(R.string.app_name))
+                    replaceCurrentFragment(LocalTracksFragment(), bundle)
+                }
+            }
+            true
+        }
+    }
+
+    private fun replaceCurrentFragment(fragment: Fragment, bundle: Bundle = Bundle()
+                                       , addToBackStack: Boolean = false) {
         fragment.arguments = bundle
         fragmentManager.beginTransaction()
                 .replace(R.id.fragmentContainer, fragment)
+                .apply { if (addToBackStack) addToBackStack(null) }
                 .commit()
     }
 
-    private fun loadDirectoryList() {
-        val contentResolver = contentResolver
-        val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-        val cursor = contentResolver.query(uri, null, null, null, null)
-        cursor.run {
-            if (moveToFirst()) {
-                val path = getColumnIndex(MediaStore.Audio.Media.DATA)
-                val isMusic = getColumnIndex(MediaStore.Audio.Media.IS_MUSIC)
-                do {
-                    val thisIsMusic = getInt(isMusic)
-                    if (thisIsMusic != 0) {
-                        val thisPath = getString(path)
-                        directoryList.add(getParent(thisPath))
-                    }
-                } while (moveToNext())
-            }
+    override fun onNewIntent(intent: Intent) {
+        if (intent.action == Intent.ACTION_SEARCH) {
+            val bundle = Bundle()
+            bundle.putString("query", intent.getStringExtra(SearchManager.QUERY))
+            replaceCurrentFragment(VkTracksFragment(), bundle, true)
         }
-        cursor.close()
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         when (requestCode) {
             EXTERNAL_STORAGE_PERMISSION_CODE -> {
                 if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                    loadDirectoryList()
-                    val bundle = Bundle()
-                    bundle.putStringArrayList("directoryList", ArrayList(directoryList.toList()))
-                    replaceCurrentFragment(DirectoriesFragment(), bundle)
+                    replaceCurrentFragment(DirectoriesFragment())
                 }
                 return
             }
             else -> {
 
             }
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.options_menu, menu)
+        val searchManager = getSystemService(Context.SEARCH_SERVICE) as SearchManager
+        (menu.findItem(R.id.search).actionView as SearchView).apply {
+            setSearchableInfo(searchManager.getSearchableInfo(componentName))
+        }
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            android.R.id.home -> {
+                drawerLayout.openDrawer(GravityCompat.START)
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
     }
 }

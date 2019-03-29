@@ -1,6 +1,7 @@
 package mitya.pepemusic
 
 import android.os.Bundle
+import android.provider.MediaStore
 import android.support.v4.app.Fragment
 import android.support.v7.widget.LinearLayoutManager
 import android.view.LayoutInflater
@@ -13,7 +14,7 @@ import kotlinx.android.synthetic.main.fragment_main.*
  */
 class DirectoriesFragment : Fragment() {
 
-    private lateinit var directoryList: ArrayList<String>
+    private val directoryList = hashSetOf<String>()
     private val adapter = DirectoriesAdapter { openDirectory(it) }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -22,9 +23,9 @@ class DirectoriesFragment : Fragment() {
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        directoryList = arguments!!.getStringArrayList("directoryList")
+        loadDirectoryList()
         setupRecyclerView()
-        adapter.addDirectories(directoryList)
+        adapter.addDirectories(ArrayList(directoryList.toList()))
     }
 
     private fun setupRecyclerView() {
@@ -32,11 +33,30 @@ class DirectoriesFragment : Fragment() {
         recyclerView.layoutManager = LinearLayoutManager(activity)
     }
 
+
+    private fun loadDirectoryList() {
+        val contentResolver = context!!.contentResolver
+        val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        val cursor = contentResolver.query(uri, null, null, null, null)
+        cursor.run {
+            if (moveToFirst()) {
+                val path = getColumnIndex(MediaStore.Audio.Media.DATA)
+                val isMusic = getColumnIndex(MediaStore.Audio.Media.IS_MUSIC)
+                do {
+                    val thisIsMusic = getInt(isMusic)
+                    if (thisIsMusic != 0) {
+                        val thisPath = getString(path)
+                        directoryList.add(getParent(thisPath))
+                    }
+                } while (moveToNext())
+            }
+        }
+        cursor.close()
+    }
+
     private fun openDirectory(path: String) {
-        val bundle = Bundle()
-        bundle.putString("currentDirectory", path)
-        val fragment = TracksFragment()
-        fragment.arguments = bundle
+        val bundle = Bundle().apply { putString("currentDirectory", path) }
+        val fragment = LocalTracksFragment().apply { arguments = bundle }
         this.requireFragmentManager().beginTransaction()
                 .replace(R.id.fragmentContainer, fragment, null)
                 .addToBackStack(null)

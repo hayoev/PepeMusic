@@ -26,7 +26,7 @@ class AudioPlayerService : Service() {
     private val binder = AudioPLayerBinder()
 
     lateinit var playlist: Playlist
-    lateinit var currentDirectory: String
+    private lateinit var currentDirectory: String
     val player: SimpleExoPlayer by lazy { ExoPlayerFactory.newSimpleInstance(this, DefaultTrackSelector()) }
     private val mediaSession: MediaSessionCompat by lazy { MediaSessionCompat(this, getString(R.string.app_name)) }
     private val mediaSessionConnector: MediaSessionConnector by lazy { MediaSessionConnector(mediaSession) }
@@ -52,10 +52,9 @@ class AudioPlayerService : Service() {
                 })
     }
 
-
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         playlist = intent.getParcelableExtra("playlist")
-        currentDirectory = intent.getStringExtra("directory")
+        currentDirectory = intent.getStringExtra("directory") ?: ""
         val dataSourceFactory = DefaultDataSourceFactory(this,
                 Util.getUserAgent(this, getString(R.string.app_name)))
         val concatenatingMediaSource = ConcatenatingMediaSource()

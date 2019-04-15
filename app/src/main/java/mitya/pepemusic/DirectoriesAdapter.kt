@@ -10,7 +10,7 @@ import kotlinx.android.synthetic.main.directory_layout.view.*
 /**
  * Created by Mitya on 02.07.2017.
  */
-class DirectoriesAdapter(val listener: (String) -> Unit) : Adapter<DirectoriesAdapter.DirectoryViewHolder>() {
+class DirectoriesAdapter(private val listener: (String) -> Unit) : Adapter<DirectoriesAdapter.DirectoryViewHolder>() {
 
     private val items = arrayListOf<String>()
 

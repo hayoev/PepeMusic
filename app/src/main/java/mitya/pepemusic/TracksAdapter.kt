@@ -10,9 +10,10 @@ import kotlinx.android.synthetic.main.track_layout.view.*
 /**
  * Created by Mitya on 28.06.2017.
  */
-open class TracksAdapter(private val clickListener: (Int) -> Unit) : Adapter<TracksAdapter.TrackViewHolder>() {
+open class TracksAdapter(private val clickListener: (Int) -> Unit
+                         , private val longClickListener: (Int) -> Boolean = { true }) : Adapter<TracksAdapter.TrackViewHolder>() {
 
-    private val items = arrayListOf<Track>()
+    val items = arrayListOf<Track>()
 
     fun addTrack(track: Track) {
         items.add(track)
@@ -20,12 +21,13 @@ open class TracksAdapter(private val clickListener: (Int) -> Unit) : Adapter<Tra
     }
 
     fun addTrackList(trackList: ArrayList<Track>) {
-        val startPosition = itemCount
+        items.clear()
         items.addAll(trackList)
-        this.notifyItemRangeInserted(startPosition, items.size)
+        this.notifyItemRangeInserted(0, items.size)
     }
 
-    override fun onBindViewHolder(holder: TrackViewHolder, position: Int) = holder.bindTrack(items[position], clickListener)
+    override fun onBindViewHolder(holder: TrackViewHolder, position: Int) =
+            holder.bindTrack(items[position], clickListener, longClickListener)
 
     override fun getItemCount() = items.size
 
@@ -35,11 +37,12 @@ open class TracksAdapter(private val clickListener: (Int) -> Unit) : Adapter<Tra
     }
 
     class TrackViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        fun bindTrack(track: Track, clickListener: (Int) -> Unit) {
+        fun bindTrack(track: Track, clickListener: (Int) -> Unit, longClickListener: (Int) -> Boolean) {
             with(itemView) {
                 trackTitle.text = track.title
                 trackArtist.text = track.artist
                 setOnClickListener { clickListener(this@TrackViewHolder.adapterPosition) }
+                setOnLongClickListener { longClickListener(this@TrackViewHolder.adapterPosition) }
             }
         }
     }

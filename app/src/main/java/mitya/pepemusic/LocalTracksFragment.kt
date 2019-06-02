@@ -4,8 +4,8 @@ import android.content.ContentUris
 import android.content.Intent
 import android.os.Bundle
 import android.provider.MediaStore
+import androidx.core.net.toFile
 import com.google.android.exoplayer2.util.Util
-
 
 class LocalTracksFragment : TracksFragment() {
 
@@ -15,6 +15,8 @@ class LocalTracksFragment : TracksFragment() {
         currentDirectory = arguments!!.getString("currentDirectory")
         super.onActivityCreated(savedInstanceState)
     }
+
+    override val adapter = TracksAdapter({ playTrack(it) }, {}, { deleteTrack(it) })
 
     override fun loadTrackList(): ArrayList<Track> {
         val tracks = arrayListOf<Track>()
@@ -34,7 +36,7 @@ class LocalTracksFragment : TracksFragment() {
                         val thisTitle = getString(titleColumn)
                         val thisArtist = getString(artistColumn)
                         tracks.add(Track(thisTitle, thisArtist,
-                                ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, thisId)
+                                ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, thisId)
                         ))
                     }
                 } while (moveToNext())
@@ -53,5 +55,17 @@ class LocalTracksFragment : TracksFragment() {
         }.also {
             Util.startForegroundService(context, it)
         }
+    }
+
+    private fun deleteTrack(currentTrack: Int) {
+        val file = adapter.items[currentTrack].contentUri.toFile()
+        if (file.exists()) {
+            log("exist")
+            if (file.delete()) {
+                log("file Deleted : ${adapter.items[currentTrack].contentUri}")
+            } else {
+                log("file not deleted : ${adapter.items[currentTrack].contentUri}")
+            }
+        } else log("don't exist")
     }
 }

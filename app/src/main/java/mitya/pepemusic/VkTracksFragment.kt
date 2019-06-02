@@ -98,7 +98,7 @@ class VkTracksFragment : TracksFragment() {
         }
     }
 
-    private fun saveTrack(trackIndex: Int): Boolean {
+    private fun saveTrack(trackIndex: Int) {
         toast("Saving track ${adapter.items[trackIndex].artist} - ${adapter.items[trackIndex].title}", Toast.LENGTH_LONG)
         compositeDisposable.add(VkService.getInstance().downloadTrack(adapter.items[trackIndex].contentUri.toString())
                 .subscribeOn(Schedulers.io())
@@ -111,10 +111,9 @@ class VkTracksFragment : TracksFragment() {
                         writeAll(it.source())
                         close()
                     }
-                    context!!.sendBroadcast(Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(file)))
+                    requireContext().sendBroadcast(Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(file)))
                     toast("Track saved")
                 }, { handleError(it) }))
-        return true
     }
 
     private fun handleError(error: Throwable) {
